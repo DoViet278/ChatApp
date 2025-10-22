@@ -1,9 +1,10 @@
-package com.example.chatapplication.ui.auth
+package com.example.chatapplication.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.chatapplication.data.model.User
 import com.example.chatapplication.data.repository.AuthRepository
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,12 @@ class AuthViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    init {
+        viewModelScope.launch {
+            val user = repository.getCurrentUser()
+            _currentUser.value = user
+        }
+    }
     fun register(name: String, email: String, password: String) {
         viewModelScope.launch {
             val result = repository.registerUser(name, email, password)

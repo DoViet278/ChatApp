@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.chatapplication"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -82,4 +82,16 @@ dependencies {
     //zego
     implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
     implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    implementation("io.github.jan-tennert.supabase:storage-kt:2.0.1")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.0.1")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.1")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.0.1")
+
+    //ktor
+    implementation("io.ktor:ktor-client-android:2.3.13")
+    implementation("io.ktor:ktor-client-core: 2.3.13")
+    implementation("io.ktor:ktor-utils: 2.3.13")
 }

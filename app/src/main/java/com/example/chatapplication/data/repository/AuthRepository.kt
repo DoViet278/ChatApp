@@ -26,7 +26,7 @@ class AuthRepository @Inject constructor(
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
             val doc = firestore.collection("users").document(result.user!!.uid).get().await()
-            val user = doc.toObject(User::class.java) ?: User(result.user!!.uid, email, "")
+            val user = doc.toObject(User::class.java) ?: User(result.user!!.uid, "", email)
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)
@@ -36,4 +36,16 @@ class AuthRepository @Inject constructor(
     fun logout() {
         auth.signOut()
     }
+
+    suspend fun getCurrentUser(): User? {
+        val firebaseUser = FirebaseAuth.getInstance().currentUser
+        return if (firebaseUser != null) {
+            User(
+                uid  = firebaseUser.uid,
+                name = firebaseUser.displayName ?: "",
+                email = firebaseUser.email ?: ""
+            )
+        } else null
+    }
+
 }
