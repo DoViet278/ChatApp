@@ -28,6 +28,7 @@ class AuthViewModel @Inject constructor(
         }
     }
     fun register(name: String, email: String, password: String) {
+        _error.value = null
         viewModelScope.launch {
             val result = repository.registerUser(name, email, password)
             result.onSuccess {

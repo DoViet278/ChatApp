@@ -29,11 +29,8 @@ import com.example.chatapplication.ui.viewmodel.AuthViewModel
 fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-
     val user by viewModel.currentUser.collectAsState()
     val error by viewModel.error.collectAsState()
-
-    Log.d("LoginScreen", "user: $user")
 
     LaunchedEffect(user) {
         if (user != null) navController.navigate(Screen.Home.route) {
@@ -48,7 +45,9 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
             OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
             OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Mật khẩu") })
             Spacer(Modifier.height(8.dp))
-            Button(onClick = { viewModel.login(email, password) }) {
+            Button(onClick = {
+                viewModel.login(email, password)
+            }) {
                 Text("Đăng nhập")
             }
             TextButton(onClick = { navController.navigate(Screen.Register.route) }) {

@@ -1,5 +1,6 @@
 package com.example.chatapplication.data.repository
 
+import android.util.Log
 import com.example.chatapplication.data.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -12,9 +13,25 @@ class AuthRepository @Inject constructor(
 ) {
     suspend fun registerUser(name: String, email: String, password: String): Result<User> {
         return try {
+            val existing = firestore.collection("users")
+                .whereEqualTo("email", email)
+                .get()
+                .await()
+
+            if (!existing.isEmpty) {
+                return Result.failure(Exception("Email này đã được đăng ký."))
+            }
+
             val result = auth.createUserWithEmailAndPassword(email, password).await()
-            val user = User(result.user!!.uid, name, email)
-            firestore.collection("users").document(user.uid).set(user).await()
+            val firebaseUser = result.user ?: return Result.failure(Exception("Không thể tạo người dùng."))
+
+            val user = User(
+                uid = firebaseUser.uid,
+                name = name,
+                email = email
+            )
+
+            firestore.collection("users").document(firebaseUser.uid).set(user).await()
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)
@@ -24,6 +41,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun loginUser(email: String, password: String): Result<User> {
         return try {
+            Log.d("login","$email")
             val result = auth.signInWithEmailAndPassword(email, password).await()
             val doc = firestore.collection("users").document(result.user!!.uid).get().await()
             val user = doc.toObject(User::class.java) ?: User(result.user!!.uid, "", email)

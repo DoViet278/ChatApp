@@ -63,8 +63,6 @@ fun ProfileScreen(
     val isUploading by viewModel.isUploading.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
 
-    Log.d("ProfileScreen", "user: $user")
-
     LaunchedEffect(Unit) {
         user?.let {
             viewModel.loadUser(it.uid)
@@ -110,10 +108,19 @@ fun ProfileScreen(
     }
 
     profile?.let { user ->
-        var name by remember { mutableStateOf(user.name) }
-        var email by remember { mutableStateOf(user.email) }
-        var sdt by remember { mutableStateOf(user.sdt) }
-        var birthday by remember { mutableStateOf(user.birthday) }
+        var name by remember { mutableStateOf("") }
+        var email by remember { mutableStateOf("") }
+        var sdt by remember { mutableStateOf("") }
+        var birthday by remember { mutableStateOf("") }
+
+        LaunchedEffect(profile?.uid) {
+            profile?.let { user ->
+                name = user.name
+                email = user.email
+                sdt = user.sdt
+                birthday = user.birthday
+            }
+        }
 
         var editName by remember { mutableStateOf(false) }
         var editEmail by remember { mutableStateOf(false) }
