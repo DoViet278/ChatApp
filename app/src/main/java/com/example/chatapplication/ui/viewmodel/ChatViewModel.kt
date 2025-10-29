@@ -3,6 +3,8 @@ package com.example.chatapplication.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.chatapplication.data.model.ChatMessage
+import com.example.chatapplication.data.model.ChatRoom
+import com.example.chatapplication.data.model.User
 import com.example.chatapplication.data.repository.ChatRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,12 @@ class ChatViewModel @Inject constructor(
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages
 
+    private val _chatRoom = MutableStateFlow<ChatRoom?>(null)
+    val chatRoom: StateFlow<ChatRoom?> = _chatRoom
+
+    private val _usersInRoom = MutableStateFlow<List<User>>(emptyList())
+    val usersInRoom: StateFlow<List<User>> = _usersInRoom
+
     fun listenMessages(roomId: String) {
         viewModelScope.launch {
             chatRepository.getMessages(roomId).collectLatest {
@@ -31,8 +39,6 @@ class ChatViewModel @Inject constructor(
         roomId: String,
         senderId: String,
         text: String,
-        senderName: String? = null,
-        senderAvatar: String? = null
     ) {
         if (text.isBlank()) return
 
@@ -40,11 +46,28 @@ class ChatViewModel @Inject constructor(
             val msg = ChatMessage(
                 message = text,
                 senderId = senderId,
-                senderName = senderName,
-                senderAvatar = senderAvatar,
                 timestamp = System.currentTimeMillis()
             )
             chatRepository.sendMessage(roomId, msg)
+        }
+    }
+
+    fun listenChatRoomInfo(roomId: String) {
+        viewModelScope.launch {
+            chatRepository.getChatRoomInfo(roomId).collect { room ->
+                _chatRoom.value = room
+                room?.let {
+                    listenUsersInRoom(it.userIds)
+                }
+            }
+        }
+    }
+
+    private fun listenUsersInRoom(userIds: List<String>) {
+        viewModelScope.launch {
+            chatRepository.getUsersInChatRoom(userIds).collect { users ->
+                _usersInRoom.value = users
+            }
         }
     }
 }

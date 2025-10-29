@@ -13,29 +13,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
+import com.example.chatapplication.ui.viewmodel.HomeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.chatapplication.data.model.User
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatOneScreen(
     currentUserId: String,
-    otherUserName: String,
-    otherUserAvatar: String?,
+    otherUserId: String,
     roomId: String,
-    viewModel: ChatViewModel
+    viewModel: ChatViewModel,
+    homeViewModel: HomeViewModel
 ) {
     val messages by viewModel.messages.collectAsState()
     var input by remember { mutableStateOf("") }
+    var otherUser by remember { mutableStateOf<User?>(null) }
 
     LaunchedEffect(roomId) {
         viewModel.listenMessages(roomId)
     }
+
+    LaunchedEffect(otherUserId) {
+        otherUser = homeViewModel.getUserById(otherUserId)
+    }
+
+    val otherUserName = otherUser?.name ?: "Đang tải..."
+    val otherUserAvatar = otherUser?.avtUrl
 
     Scaffold(
         topBar = {
@@ -47,7 +59,8 @@ fun ChatOneScreen(
                             contentDescription = null,
                             modifier = Modifier
                                 .size(36.dp)
-                                .clip(CircleShape)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(otherUserName)
@@ -65,9 +78,10 @@ fun ChatOneScreen(
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(8.dp),
                 reverseLayout = true,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 val reversed = messages.reversed()
                 items(reversed) { msg ->
@@ -92,6 +106,20 @@ fun ChatOneScreen(
 
 @Composable
 fun MessageBubblePrivate(msg: ChatMessage, isMe: Boolean, otherAvatar: String?) {
+    val msgTime = remember(msg.timestamp) {
+        val msgDate = Date(msg.timestamp)
+        val now = Calendar.getInstance()
+        val msgCal = Calendar.getInstance().apply { time = msgDate }
+
+        val sameDay = now.get(Calendar.YEAR) == msgCal.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == msgCal.get(Calendar.DAY_OF_YEAR)
+
+        if (sameDay) {
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(msgDate)
+        } else {
+            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(msgDate)
+        }
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
@@ -128,7 +156,7 @@ fun MessageBubblePrivate(msg: ChatMessage, isMe: Boolean, otherAvatar: String?) 
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
+                    text = msgTime,
                     color = if (isMe) Color.White.copy(alpha = 0.7f) else Color.Gray,
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = if (isMe) TextAlign.End else TextAlign.Start,

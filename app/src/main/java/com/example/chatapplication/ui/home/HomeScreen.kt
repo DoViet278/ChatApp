@@ -3,10 +3,12 @@ package com.example.chatapplication.ui.home
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
@@ -14,12 +16,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.chatapplication.Screen
 import com.example.chatapplication.data.model.ChatRoom
+import com.example.chatapplication.data.model.User
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
 import com.example.chatapplication.ui.viewmodel.HomeViewModel
 import im.zego.zim.entity.ZIMAudioMessage
@@ -41,7 +47,6 @@ fun HomeScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var isGroup by remember { mutableStateOf(false) }
-
 
     LaunchedEffect(currentUserId) {
         viewModel.listenChatRooms(currentUserId)
@@ -92,18 +97,23 @@ fun HomeScreen(
             modifier = Modifier.padding(padding).fillMaxSize()
         ) {
             items(chatRooms) { room ->
-                ChatRoomItem(room) {
+                ChatRoomItem(
+                    room = room,
+                    currentUserId = currentUserId,
+                    getUserById = { id -> viewModel.getUserById(id) }
+                ) {
                     val id = room.chatroomId
-                    Log.d("room","$id")
+                    Log.d("room","$isGroup")
+                    Log.d("roomname","${room.groupName}")
                     if(id.isNotBlank()){
-                        if(room.isGroup){
+                        if(room.group){
                             navController.navigate(Screen.ChatGroup.createRoute(id))
                         }else{
                             val otherId = room.userIds.firstOrNull{it != currentUserId}
                             if(otherId != null){
                                 navController.navigate(Screen.ChatOneToOne.createRoute(id,otherId))
                             }else{
-                                Toast.makeText(navController.context,"Lỗi chuyen màn",Toast.LENGTH_SHORT).show()
+                                Toast.makeText(navController.context,"Lỗi màn",Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -126,7 +136,6 @@ fun HomeScreen(
                             groupName = "Nhóm mới"
                         ) { chatId ->
                             if (chatId.isNotEmpty()) {
-                                Log.d("chatid", "onCreate: $chatId")
                                 navController.navigate(Screen.ChatGroup.createRoute(chatId))
                             }
                         }
@@ -136,7 +145,6 @@ fun HomeScreen(
                             email = emails.firstOrNull() ?: ""
                         ) { chatId, otherUserId ->
                             if (chatId.isNotEmpty()) {
-                                Log.d("chatid", "onCreate: $chatId")
                                 navController.navigate(Screen.ChatOneToOne.createRoute(chatId, otherUserId))
                             }
                         }
@@ -148,78 +156,86 @@ fun HomeScreen(
 }
 
 @Composable
-fun ChatRoomItem(room: ChatRoom, onClick: () -> Unit) {
+fun ChatRoomItem(
+    room: ChatRoom,
+    currentUserId: String,
+    getUserById: suspend (String) -> User?,
+    onClick: () -> Unit
+) {
+    var otherUser by remember { mutableStateOf<User?>(null) }
+
+    LaunchedEffect(room.chatroomId) {
+        if (!room.group) {
+            val otherId = room.userIds.firstOrNull { it != currentUserId }
+            if (otherId != null) {
+                otherUser = getUserById(otherId)
+            }
+        }
+    }
+
+    val displayName = when {
+        room.group -> room.groupName ?: "Nhóm không tên"
+        else -> otherUser?.name ?: "Đang tải..."
+    }
+
+    val displayAvatar = when {
+        room.group -> room.groupAvt ?: "https://picsum.photos/id/1/200/300"
+        else -> otherUser?.avtUrl
+    }
+
+    val lastTime = android.text.format.DateUtils.getRelativeTimeSpanString(room.lastMessageTimestamp)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
             .clickable { onClick() }
     ) {
-        Column(Modifier.padding(8.dp)) {
-            Text("Room ID: ${room.chatroomId}")
-            Text("Last Sender: ${room.lastMessageSenderId}")
-            Text("Last Message Time: ${room.lastMessageTimestamp}")
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (displayAvatar != null) {
+                Image(
+                    painter = rememberAsyncImagePainter(displayAvatar),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Color.LightGray.copy(alpha = 0.3f)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.AccountCircle,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(displayName, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    room.lastMessage ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1
+                )
+            }
+
+            Text(
+                lastTime.toString(),
+                style = MaterialTheme.typography.labelSmall
+            )
         }
     }
 }
 
-@Composable
-fun CreateChatDialog(
-    isGroup: Boolean,
-    onDismiss: () -> Unit,
-    onCreate: (List<String>) -> Unit
-) {
-    var email1 by remember { mutableStateOf("") }
-    var email2 by remember { mutableStateOf("") }
-    var email3 by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                if (isGroup) {
-                    val emails = listOf(email1, email2, email3).filter { it.isNotBlank() }
-                    if (emails.size >= 2) onCreate(emails)
-                } else {
-                    if (email1.isNotBlank()) onCreate(listOf(email1))
-                }
-            }) {
-                Text("Tạo")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Hủy") }
-        },
-        title = {
-            Text(if (isGroup) "Tạo nhóm chat" else "Tạo chat 1-1")
-        },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = email1,
-                    onValueChange = { email1 = it },
-                    label = { Text("Email 1") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (isGroup) {
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = email2,
-                        onValueChange = { email2 = it },
-                        label = { Text("Email 2") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = email3,
-                        onValueChange = { email3 = it },
-                        label = { Text("Email 3") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-    )
-}
+
 
 

@@ -9,7 +9,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.chatapplication.ui.home.ChatScreen
+import com.example.chatapplication.ui.home.ChatOneScreen
+import com.example.chatapplication.ui.home.GroupChatScreen
 import com.example.chatapplication.ui.viewmodel.AuthViewModel
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
 import com.example.chatapplication.ui.home.HomeScreen
@@ -82,11 +83,12 @@ fun AppNavGraph(navController: NavHostController) {
             val currentUser by authViewModel.currentUser.collectAsState()
 
             if (currentUser != null && roomId.isNotEmpty()) {
-                ChatScreen(
+                ChatOneScreen(
                     currentUserId = currentUser!!.uid,
                     otherUserId = otherUserId,
                     roomId = roomId,
-                    viewModel = chatViewModel
+                    viewModel = chatViewModel,
+                    homeViewModel = homeViewModel
                 )
             }
         }
@@ -101,15 +103,12 @@ fun AppNavGraph(navController: NavHostController) {
             val currentUser by authViewModel.currentUser.collectAsState()
 
             if (currentUser != null && roomId.isNotEmpty()) {
-                ChatScreen(
+                GroupChatScreen(
                     currentUserId = currentUser!!.uid,
-                    otherUserId = "",
                     roomId = roomId,
                     viewModel = chatViewModel
                 )
             }
         }
-
-
     }
 }

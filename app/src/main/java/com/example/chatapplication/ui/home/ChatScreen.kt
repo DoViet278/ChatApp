@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -37,17 +38,17 @@ fun ChatScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(Color(0xFFF0F2F5)) // nền giống Messenger
+            .background(Color(0xFFF0F2F5))
             .padding(8.dp)
     ) {
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            reverseLayout = true, // tin mới ở dưới
+            reverseLayout = true,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val reversed = messages.reversed() // để hiển thị đúng chiều
+            val reversed = messages.reversed()
             items(reversed) { msg ->
                 val isMe = msg.senderId == currentUserId
                 MessageBubble(msg, isMe)
@@ -69,6 +70,20 @@ fun ChatScreen(
 
 @Composable
 fun MessageBubble(msg: ChatMessage, isMe: Boolean) {
+    val msgTime = remember(msg.timestamp) {
+        val msgDate = Date(msg.timestamp)
+        val now = Calendar.getInstance()
+        val msgCal = Calendar.getInstance().apply { time = msgDate }
+
+        val sameDay = now.get(Calendar.YEAR) == msgCal.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == msgCal.get(Calendar.DAY_OF_YEAR)
+
+        if (sameDay) {
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(msgDate)
+        } else {
+            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(msgDate)
+        }
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
@@ -97,7 +112,7 @@ fun MessageBubble(msg: ChatMessage, isMe: Boolean) {
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
-                    text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
+                    text = msgTime,
                     color = if (isMe) Color.White.copy(alpha = 0.7f) else Color.Gray,
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = if (isMe) TextAlign.End else TextAlign.Start,

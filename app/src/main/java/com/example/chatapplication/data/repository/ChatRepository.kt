@@ -3,6 +3,8 @@ package com.example.chatapplication.data.repository
 import android.util.Log
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.data.model.ChatRoom
+import com.example.chatapplication.data.model.User
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
@@ -17,15 +19,19 @@ class ChatRepository @Inject constructor(
     private val userRef = db.collection("users")
 
     suspend fun sendMessage(roomId: String, message: ChatMessage) {
-        chatRoomRef.document(roomId)
+        val docRef = chatRoomRef.document(roomId)
             .collection("chats")
-            .add(message)
-            .await()
+            .document()
+
+        val msgWithId = message.copy(messageId = docRef.id)
+
+        docRef.set(msgWithId).await()
 
         chatRoomRef.document(roomId).update(
             mapOf(
-                "lastMessageSenderId" to message.senderId,
-                "lastMessageTimestamp" to message.timestamp
+                "lastMessage" to msgWithId.message,
+                "lastMessageSenderId" to msgWithId.senderId,
+                "lastMessageTimestamp" to msgWithId.timestamp,
             )
         )
     }
@@ -45,6 +51,16 @@ class ChatRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+//    suspend fun sendFileMessage(roomId: String, senderId: String, senderName: String, senderAvatar: String, fileUrl: String, fileType: String) {
+//        val message = ChatMessage(
+//            senderId = senderId,
+//            senderName = senderName,
+//            senderAvatar = senderAvatar,
+//            messageType = fileType,
+//            fileUrl = fileUrl
+//        )
+//        sendMessage(roomId, message)
+//    }
     fun getUserChatRooms(userId: String) = callbackFlow {
         val listener = chatRoomRef
             .whereArrayContains("userIds", userId)
@@ -120,11 +136,48 @@ class ChatRepository @Inject constructor(
             lastMessageTimestamp = System.currentTimeMillis(),
             userIds = userIds,
             groupName = groupName,
-            isGroup = true
+            group = true,
+            groupAvt = "https://picsum.photos/id/1/200/300"
         )
 
         docRef.set(newRoom).await()
         return docRef.id
     }
+
+    fun getChatRoomInfo(roomId: String) = callbackFlow {
+        val listener = chatRoomRef.document(roomId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val room = snapshot?.toObject(ChatRoom::class.java)
+                trySend(room)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    fun getUsersInChatRoom(userIds: List<String>) = callbackFlow {
+        if (userIds.isEmpty()) {
+            trySend(emptyList<User>())
+            close()
+            return@callbackFlow
+        }
+
+        val listener = userRef
+            .whereIn(FieldPath.documentId(), userIds)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val users = snapshot?.toObjects(User::class.java) ?: emptyList()
+                trySend(users)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
 
 }

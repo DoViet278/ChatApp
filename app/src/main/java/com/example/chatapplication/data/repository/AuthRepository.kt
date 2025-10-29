@@ -28,7 +28,8 @@ class AuthRepository @Inject constructor(
             val user = User(
                 uid = firebaseUser.uid,
                 name = name,
-                email = email
+                email = email,
+                avtUrl = "https://picsum.photos/id/1/200/300"
             )
 
             firestore.collection("users").document(firebaseUser.uid).set(user).await()

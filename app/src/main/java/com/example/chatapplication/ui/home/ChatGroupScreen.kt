@@ -13,11 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.chatapplication.data.model.ChatMessage
+import com.example.chatapplication.data.model.User
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
+import io.ktor.client.plugins.Sender
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -25,16 +28,17 @@ import java.util.*
 @Composable
 fun GroupChatScreen(
     currentUserId: String,
-    groupName: String,
-    groupAvatar: String?,
     roomId: String,
     viewModel: ChatViewModel
 ) {
     val messages by viewModel.messages.collectAsState()
+    val usersInRoom by viewModel.usersInRoom.collectAsState()
     var input by remember { mutableStateOf("") }
+    val chatRoom by viewModel.chatRoom.collectAsState()
 
     LaunchedEffect(roomId) {
         viewModel.listenMessages(roomId)
+        viewModel.listenChatRoomInfo(roomId)
     }
 
     Scaffold(
@@ -43,14 +47,15 @@ fun GroupChatScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = rememberAsyncImagePainter(groupAvatar),
+                            painter = rememberAsyncImagePainter(chatRoom?.groupAvt),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(36.dp)
-                                .clip(CircleShape)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text(groupName)
+                        Text(chatRoom?.groupName ?: "Group Chat")
                     }
                 }
             )
@@ -65,14 +70,16 @@ fun GroupChatScreen(
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(8.dp),
                 reverseLayout = true,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 val reversed = messages.reversed()
                 items(reversed) { msg ->
+                    val sender = usersInRoom.find { it.uid == msg.senderId }
                     val isMe = msg.senderId == currentUserId
-                    MessageBubbleGroup(msg, isMe)
+                    MessageBubbleGroup(msg, sender, isMe)
                 }
             }
 
@@ -91,7 +98,21 @@ fun GroupChatScreen(
 }
 
 @Composable
-fun MessageBubbleGroup(msg: ChatMessage, isMe: Boolean) {
+fun MessageBubbleGroup(msg: ChatMessage,sender: User?, isMe: Boolean) {
+    val msgTime = remember(msg.timestamp) {
+        val msgDate = Date(msg.timestamp)
+        val now = Calendar.getInstance()
+        val msgCal = Calendar.getInstance().apply { time = msgDate }
+
+        val sameDay = now.get(Calendar.YEAR) == msgCal.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == msgCal.get(Calendar.DAY_OF_YEAR)
+
+        if (sameDay) {
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(msgDate)
+        } else {
+            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(msgDate)
+        }
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
@@ -100,7 +121,7 @@ fun MessageBubbleGroup(msg: ChatMessage, isMe: Boolean) {
         if (!isMe) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
-                    painter = rememberAsyncImagePainter(msg.senderAvatar),
+                    painter = rememberAsyncImagePainter(sender?.avtUrl),
                     contentDescription = null,
                     modifier = Modifier
                         .size(32.dp)
@@ -126,7 +147,7 @@ fun MessageBubbleGroup(msg: ChatMessage, isMe: Boolean) {
             ) {
                 if (!isMe) {
                     Text(
-                        text = msg.senderName ?: "Unknown",
+                        text = sender?.name ?: "Unknown",
                         color = Color(0xFF0084FF),
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -137,7 +158,7 @@ fun MessageBubbleGroup(msg: ChatMessage, isMe: Boolean) {
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(msg.timestamp)),
+                    text = msgTime,
                     color = if (isMe) Color.White.copy(alpha = 0.7f) else Color.Gray,
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = if (isMe) TextAlign.End else TextAlign.Start,
