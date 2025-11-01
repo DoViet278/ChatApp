@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.chatapplication.Screen
@@ -31,6 +32,7 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
     var password by remember { mutableStateOf("") }
     val user by viewModel.currentUser.collectAsState()
     val error by viewModel.error.collectAsState()
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(user) {
         if (user != null) navController.navigate(Screen.Home.route) {
@@ -42,10 +44,25 @@ fun LoginScreen(navController: NavController, viewModel: AuthViewModel) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Đăng nhập", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Mật khẩu") })
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    viewModel.clearError()
+                },
+                label = { Text("Email") }
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    viewModel.clearError()
+                },
+                label = { Text("Mật khẩu") }
+            )
             Spacer(Modifier.height(8.dp))
             Button(onClick = {
+                focusManager.clearFocus()
                 viewModel.login(email, password)
             }) {
                 Text("Đăng nhập")

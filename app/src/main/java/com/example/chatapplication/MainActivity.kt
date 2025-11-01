@@ -20,6 +20,8 @@ import com.example.chatapplication.ui.login.LoginScreen
 import com.example.chatapplication.ui.login.RegisterScreen
 import com.example.chatapplication.ui.theme.ChatApplicationTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -32,6 +34,27 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 AppNavGraph(navController)
             }
+        }
+    }
+    override fun onStart() {
+        super.onStart()
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        currentUser?.let {
+            val userRef = FirebaseFirestore.getInstance().collection("users").document(it.uid)
+            userRef.update("isOnline", true)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        currentUser?.let {
+            val userRef = FirebaseFirestore.getInstance().collection("users").document(it.uid)
+            userRef.update(
+                mapOf(
+                    "isOnline" to false,
+                )
+            )
         }
     }
 }

@@ -220,7 +220,6 @@ fun ProfileScreen(
             Button(
                 onClick = {
                     userViewModel.logout()
-                    navController.navigate(Screen.Login.route)
                 }
             ) {
                 Text("Đăng xuất")

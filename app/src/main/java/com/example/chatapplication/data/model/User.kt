@@ -6,5 +6,6 @@ data class User(
     val email: String = "",
     val sdt: String = "",
     val birthday: String = "",
-    val avtUrl: String = ""
+    val avtUrl: String = "",
+    val isOnline: Boolean = false,
 )

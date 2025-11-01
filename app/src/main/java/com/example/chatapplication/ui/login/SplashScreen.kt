@@ -22,7 +22,7 @@ import com.example.chatapplication.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(navController: NavController, viewModel: AuthViewModel) {
+fun SplashScreen(navController: NavController, viewModel: AuthViewModel,onFinish: ()-> Unit) {
     val user by viewModel.currentUser.collectAsState()
 
     var startAnimation by remember { mutableStateOf(false) }
@@ -49,6 +49,7 @@ fun SplashScreen(navController: NavController, viewModel: AuthViewModel) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
             }
         }
+        onFinish()
     }
 
     Box(

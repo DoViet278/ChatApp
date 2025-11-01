@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -24,6 +25,38 @@ class HomeViewModel @Inject constructor(
 
     private val _chatRooms = MutableStateFlow<List<ChatRoom>>(emptyList())
     val chatRooms: StateFlow<List<ChatRoom>> = _chatRooms
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    private val _onlineUsers = MutableStateFlow<List<User>>(emptyList())
+    val onlineUsers: StateFlow<List<User>> = _onlineUsers
+    private val userCache = mutableMapOf<String, User>()
+
+    init {
+        listenOnlineUsers()
+    }
+
+    fun cacheUser(user: User) {
+        userCache[user.uid] = user
+    }
+
+    fun getCachedUserName(id: String?): String {
+        return id?.let { userCache[it]?.name } ?: ""
+    }
+
+    private fun listenOnlineUsers() {
+        db.collection("users")
+            .whereEqualTo("isOnline", true)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e("HomeVM", "Lỗi lấy user online: ${e.message}")
+                    return@addSnapshotListener
+                }
+                val users = snapshot?.documents?.mapNotNull { it.toObject(User::class.java) } ?: emptyList()
+                _onlineUsers.value = users
+            }
+    }
 
     suspend fun getUserById(userId: String): User? {
         return try {
@@ -45,6 +78,10 @@ class HomeViewModel @Inject constructor(
                 _chatRooms.value = it
             }
         }
+    }
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     fun createOneToOneChat(

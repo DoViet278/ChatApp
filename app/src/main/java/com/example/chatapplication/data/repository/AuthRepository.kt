@@ -3,6 +3,7 @@ package com.example.chatapplication.data.repository
 import android.util.Log
 import com.example.chatapplication.data.model.User
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -29,7 +30,8 @@ class AuthRepository @Inject constructor(
                 uid = firebaseUser.uid,
                 name = name,
                 email = email,
-                avtUrl = "https://picsum.photos/id/1/200/300"
+                avtUrl = "https://picsum.photos/id/1/200/300",
+                isOnline = true
             )
 
             firestore.collection("users").document(firebaseUser.uid).set(user).await()
@@ -44,16 +46,41 @@ class AuthRepository @Inject constructor(
         return try {
             Log.d("login","$email")
             val result = auth.signInWithEmailAndPassword(email, password).await()
-            val doc = firestore.collection("users").document(result.user!!.uid).get().await()
-            val user = doc.toObject(User::class.java) ?: User(result.user!!.uid, "", email)
-            Result.success(user)
+            val uid = result.user?.uid ?: return Result.failure(Exception("Không tìm thấy người dùng."))
+            val userRef = firestore.collection("users").document(uid)
+            val snapshot = userRef.get().await()
+
+            userRef.update(
+                mapOf(
+                    "isOnline" to true,
+                )
+            ).await()
+
+            val user = snapshot.toObject(User::class.java)
+                ?: User(uid = uid, name = "", email = email)
+
+            Result.success(user.copy(isOnline = true))
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    fun logout() {
-        auth.signOut()
+    suspend fun logout() {
+        try {
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                val userRef = firestore.collection("users").document(currentUser.uid)
+                userRef.update(
+                    mapOf(
+                        "isOnline" to false,
+                    )
+                ).await()
+            }
+            auth.signOut()
+        } catch (e: Exception) {
+            Log.e("logout", "Lỗi khi cập nhật offline: ${e.message}")
+            auth.signOut()
+        }
     }
 
     suspend fun getCurrentUser(): User? {

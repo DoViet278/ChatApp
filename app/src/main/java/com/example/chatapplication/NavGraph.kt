@@ -2,8 +2,11 @@ package com.example.chatapplication
 
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -46,10 +49,26 @@ fun AppNavGraph(navController: NavHostController) {
     val chatViewModel : ChatViewModel = hiltViewModel()
     val profileViewModel : ProfileViewModel = hiltViewModel()
     val homeViewModel : HomeViewModel = hiltViewModel()
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val splashFinished = remember { mutableStateOf(false) }
+
+
+    if (splashFinished.value) {
+        val currentUser by authViewModel.currentUser.collectAsState()
+
+        LaunchedEffect(currentUser) {
+            if (currentUser == null) {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
+    }
+
 
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) {
-            SplashScreen(navController, authViewModel)
+            SplashScreen(navController, authViewModel, onFinish = { splashFinished.value = true })
         }
         composable(Screen.Login.route) {
             LoginScreen(navController, authViewModel)

@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,30 +37,60 @@ fun GroupChatScreen(
     val usersInRoom by viewModel.usersInRoom.collectAsState()
     var input by remember { mutableStateOf("") }
     val chatRoom by viewModel.chatRoom.collectAsState()
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(roomId) {
         viewModel.listenMessages(roomId)
         viewModel.listenChatRoomInfo(roomId)
     }
 
+    val filteredMessages = remember(messages, searchQuery) {
+        if (searchQuery.isBlank()) messages
+        else messages.filter {
+            it.message.contains(searchQuery, ignoreCase = true)
+        }
+    }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = rememberAsyncImagePainter(chatRoom?.groupAvt),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(chatRoom?.groupName ?: "Group Chat")
+            Column {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = rememberAsyncImagePainter(chatRoom?.groupAvt),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(chatRoom?.groupName ?: "Group Chat")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showSearch = !showSearch }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Tìm kiếm tin nhắn"
+                            )
+                        }
                     }
+                )
+
+                if (showSearch) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Tìm tin nhắn...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        singleLine = true
+                    )
                 }
-            )
+            }
         }
     ) { padding ->
         Column(
@@ -75,7 +107,7 @@ fun GroupChatScreen(
                 reverseLayout = true,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val reversed = messages.reversed()
+                val reversed =filteredMessages.reversed()
                 items(reversed) { msg ->
                     val sender = usersInRoom.find { it.uid == msg.senderId }
                     val isMe = msg.senderId == currentUserId
