@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.chatapplication.ui.home.ChatOneScreen
+import com.example.chatapplication.ui.home.GroupChatInfoScreen
 import com.example.chatapplication.ui.home.GroupChatScreen
 import com.example.chatapplication.ui.viewmodel.AuthViewModel
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
@@ -41,6 +42,10 @@ sealed class Screen(val route: String) {
             return "chatGroup/$roomId"
         }
     }
+    object GroupInfo : Screen("group_info/{roomId}") {
+        fun createRoute(roomId: String) = "group_info/$roomId"
+    }
+
 }
 
 @Composable
@@ -123,11 +128,30 @@ fun AppNavGraph(navController: NavHostController) {
 
             if (currentUser != null && roomId.isNotEmpty()) {
                 GroupChatScreen(
+                    navController = navController,
                     currentUserId = currentUser!!.uid,
                     roomId = roomId,
                     viewModel = chatViewModel
                 )
             }
         }
+
+        composable(
+            route = Screen.GroupInfo.route,
+            arguments = listOf(
+                navArgument("roomId") { defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val roomId = backStackEntry.arguments?.getString("roomId") ?: ""
+            val currentUser by authViewModel.currentUser.collectAsState()
+
+            if (currentUser != null && roomId.isNotEmpty()) {
+                GroupChatInfoScreen(
+                    roomId = roomId,
+                    navController = navController
+                )
+            }
+        }
+
     }
 }

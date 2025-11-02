@@ -2,6 +2,7 @@ package com.example.chatapplication.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,7 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.chatapplication.Screen
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.data.model.User
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
@@ -29,6 +32,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupChatScreen(
+    navController: NavController,
     currentUserId: String,
     roomId: String,
     viewModel: ChatViewModel
@@ -66,7 +70,9 @@ fun GroupChatScreen(
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(chatRoom?.groupName ?: "Group Chat")
+                            Text(text = chatRoom?.groupName ?: "Group Chat", modifier = Modifier.clickable(onClick = {
+                                navController.navigate(Screen.GroupInfo.createRoute(roomId))
+                            }))
                         }
                     },
                     actions = {

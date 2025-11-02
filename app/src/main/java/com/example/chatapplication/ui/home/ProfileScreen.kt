@@ -281,7 +281,7 @@ fun saveBitmapToUri(context: Context, bitmap: Bitmap): Uri? {
     val values = ContentValues().apply {
         put(MediaStore.Images.Media.DISPLAY_NAME, filename)
         put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/ChatApp") // thư mục tạm
+        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/ChatApp")
     }
 
     val resolver = context.contentResolver

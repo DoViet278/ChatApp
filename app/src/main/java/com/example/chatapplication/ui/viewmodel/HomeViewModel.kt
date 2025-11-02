@@ -80,6 +80,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun deleteChatRoom(roomId: String) {
+        viewModelScope.launch {
+            chatRepository.deleteChatRoom(roomId)
+        }
+    }
+
+
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }

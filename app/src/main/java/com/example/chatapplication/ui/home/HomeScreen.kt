@@ -1,10 +1,9 @@
 package com.example.chatapplication.ui.home
 
-import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -173,29 +172,25 @@ fun HomeScreen(
             modifier = Modifier.padding(padding).fillMaxSize()
         ) {
             items(filteredRooms) { room ->
-                ChatRoomItem(
+                ChatRoomBottomSheetItem(
                     room = room,
                     currentUserId = currentUserId,
                     getUserById = { id -> viewModel.getUserById(id) },
-                    cacheUser = { user -> viewModel.cacheUser(user) },
-                ) {
-                    val id = room.chatroomId
-                    if(id.isNotBlank()){
-                        if(room.group){
+                    cacheUser = { viewModel.cacheUser(it) },
+                    onClick = {
+                        val id = room.chatroomId
+                        if (room.group)
                             navController.navigate(Screen.ChatGroup.createRoute(id))
-                        }else{
-                            val otherId = room.userIds.firstOrNull{it != currentUserId}
-                            if(otherId != null){
-                                navController.navigate(Screen.ChatOneToOne.createRoute(id,otherId))
-                            }else{
-                                Toast.makeText(navController.context,"Lỗi màn",Toast.LENGTH_SHORT).show()
-                            }
+                        else {
+                            val otherId = room.userIds.firstOrNull { it != currentUserId }
+                            if (otherId != null)
+                                navController.navigate(Screen.ChatOneToOne.createRoute(id, otherId))
                         }
+                    },
+                    onDelete = {
+                        viewModel.deleteChatRoom(room.chatroomId)
                     }
-                    else{
-                        Toast.makeText(navController.context,"Lỗi id room",Toast.LENGTH_SHORT).show()
-                    }
-                }
+                )
             }
         }
         if (showDialog) {
@@ -230,13 +225,92 @@ fun HomeScreen(
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatRoomBottomSheetItem(
+    room: ChatRoom,
+    currentUserId: String,
+    getUserById: suspend (String) -> User?,
+    cacheUser: (User) -> Unit,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var showSheet by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { showSheet = true }
+            )
+    ) {
+        ChatRoomItem(
+            room = room,
+            currentUserId = currentUserId,
+            getUserById = getUserById,
+            cacheUser = cacheUser,
+        )
+    }
+
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor = Color.White,
+            dragHandle = {
+                Spacer(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .width(40.dp)
+                        .height(4.dp)
+                        .background(Color.LightGray, CircleShape)
+                )
+            }
+        ) {
+
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+
+                Text(
+                    text = "Xóa cuộc trò chuyện",
+                    color = Color.Red,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showSheet = false
+                            onDelete()
+                        }
+                        .padding(vertical = 16.dp)
+                )
+
+                Divider()
+
+                Text(
+                    text = "Hủy",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showSheet = false }
+                        .padding(vertical = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+
+
 @Composable
 fun ChatRoomItem(
     room: ChatRoom,
     currentUserId: String,
     getUserById: suspend (String) -> User?,
     cacheUser: (User) -> Unit,
-    onClick: () -> Unit,
 ) {
     var otherUser by remember { mutableStateOf<User?>(null) }
 
@@ -266,7 +340,6 @@ fun ChatRoomItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
-            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

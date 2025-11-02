@@ -1,15 +1,20 @@
 package com.example.chatapplication.data.repository
 
 import android.util.Log
+import com.example.chatapplication.SupabaseManager
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.data.model.ChatRoom
 import com.example.chatapplication.data.model.User
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.io.InputStream
+import java.util.UUID
 import javax.inject.Inject
 
 class ChatRepository @Inject constructor(
@@ -135,6 +140,7 @@ class ChatRepository @Inject constructor(
             lastMessageSenderId = "",
             lastMessageTimestamp = System.currentTimeMillis(),
             userIds = userIds,
+            adminIds = listOf(currentUserId),
             groupName = groupName,
             group = true,
             groupAvt = "https://picsum.photos/id/1/200/300"
@@ -177,6 +183,64 @@ class ChatRepository @Inject constructor(
             }
 
         awaitClose { listener.remove() }
+    }
+
+    suspend fun deleteChatRoom(roomId: String) {
+        val roomRef = db.collection("chatrooms").document(roomId)
+
+        val messages = roomRef.collection("chats").get().await()
+        for (doc in messages.documents) {
+            doc.reference.delete().await()
+        }
+
+        roomRef.delete().await()
+    }
+
+    //update group
+    suspend fun updateGroupName(roomId: String, newName: String) {
+        db.collection("chatrooms")
+            .document(roomId)
+            .update("groupName", newName)
+            .await()
+    }
+
+    suspend fun updateGroupAvatar(roomId: String, url: String) {
+        db.collection("chatrooms")
+            .document(roomId)
+            .update("groupAvt", url)
+            .await()
+    }
+
+    suspend fun addMemberByEmail(roomId: String, email: String): Boolean {
+        val userSnap = db.collection("users")
+            .whereEqualTo("email", email)
+            .get()
+            .await()
+
+        if (userSnap.isEmpty) return false
+
+        val uid = userSnap.documents[0].id
+
+        db.collection("chatrooms")
+            .document(roomId)
+            .update("userIds", FieldValue.arrayUnion(uid))
+            .await()
+
+        return true
+    }
+
+    suspend fun removeMember(roomId: String, userId: String) {
+        db.collection("chatrooms")
+            .document(roomId)
+            .update("userIds", FieldValue.arrayRemove(userId))
+            .await()
+    }
+
+    suspend fun uploadAvatar(inputSteam: InputStream, fileExtension: String): String {
+        val bucket = SupabaseManager.client.storage.from("imgAvt")
+        val fileName = "${UUID.randomUUID()}.$fileExtension"
+        bucket.upload(path = fileName, data = inputSteam.readBytes())
+        return bucket.publicUrl(fileName)
     }
 
 

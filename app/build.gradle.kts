@@ -85,6 +85,7 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.6.0")
 
+    //supabase
     implementation("io.github.jan-tennert.supabase:storage-kt:2.0.1")
     implementation("io.github.jan-tennert.supabase:gotrue-kt:2.0.1")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.1")
@@ -94,4 +95,8 @@ dependencies {
     implementation("io.ktor:ktor-client-android:2.3.13")
     implementation("io.ktor:ktor-client-core: 2.3.13")
     implementation("io.ktor:ktor-utils: 2.3.13")
+
+    //material
+    implementation("androidx.compose.material:material:1.6.0")
+    implementation("androidx.compose.material3:material3:1.2.0")
 }
