@@ -6,4 +6,5 @@ import im.zego.zim.ZIM
 
 @HiltAndroidApp
 class App: Application() {
+
 }

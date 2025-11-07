@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.io.InputStream
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,20 +36,23 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun sendMessage(
-        roomId: String,
-        senderId: String,
-        text: String,
-    ) {
+    fun sendMessage(roomId: String, senderId: String, text: String) {
         if (text.isBlank()) return
-
         viewModelScope.launch {
-            val msg = ChatMessage(
-                message = text,
-                senderId = senderId,
-                timestamp = System.currentTimeMillis()
+            chatRepository.sendMessage(
+                roomId,
+                ChatMessage(
+                    message = text,
+                    senderId = senderId,
+                    timestamp = System.currentTimeMillis()
+                )
             )
-            chatRepository.sendMessage(roomId, msg)
+        }
+    }
+
+    fun markAsRead(roomId: String, userId: String) {
+        viewModelScope.launch {
+            chatRepository.markAsRead(roomId, userId)
         }
     }
 
@@ -70,5 +74,49 @@ class ChatViewModel @Inject constructor(
             }
         }
     }
+
+    fun sendImage(roomId: String, userId: String, input: InputStream, ext: String) {
+        viewModelScope.launch {
+            val url = chatRepository.uploadFileToSupabase(input, ext)
+            chatRepository.sendImageMessage(roomId, userId, url)
+        }
+    }
+
+    fun sendFile(roomId: String, userId: String, input: InputStream, name: String, ext: String, size: Long) {
+        viewModelScope.launch {
+            val url = chatRepository.uploadFileToSupabase(input, ext)
+            chatRepository.sendFileMessage(roomId, userId, url, name, size)
+        }
+    }
+
+    fun sendAudio(roomId: String, userId: String, input: InputStream, ext: String) {
+        viewModelScope.launch {
+            val url = chatRepository.uploadFileToSupabase(input, ext)
+            chatRepository.sendAudioMessage(roomId, userId, url)
+        }
+    }
+
+    fun sendVideo(roomId: String, userId: String, input: InputStream, ext: String) {
+        viewModelScope.launch {
+            val url = chatRepository.uploadFileToSupabase(input, ext)
+            chatRepository.sendVideoMessage(roomId, userId, url)
+        }
+    }
+
+    //call
+    fun startVoiceCall(roomId: String, myId: String, otherId: String, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val callId = chatRepository.startOneToOneCall(roomId, myId, otherId, "voice")
+            onResult(callId)
+        }
+    }
+
+    fun startVideoCall(roomId: String, myId: String, otherId: String, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val callId = chatRepository.startOneToOneCall(roomId, myId, otherId, "video")
+            onResult(callId)
+        }
+    }
+
 }
 

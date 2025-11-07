@@ -1,5 +1,6 @@
 package com.example.chatapplication.ui.home
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,14 +21,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.chatapplication.MainActivity
 import com.example.chatapplication.Screen
+import com.example.chatapplication.ZegoConfig
 import com.example.chatapplication.data.model.ChatRoom
 import com.example.chatapplication.data.model.User
 import com.example.chatapplication.ui.viewmodel.HomeViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,6 +43,8 @@ fun HomeScreen(
     currentUserId: String,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val activity = context as MainActivity
     val chatRooms by viewModel.chatRooms.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
     val onlineUsers by viewModel.onlineUsers.collectAsState()
@@ -45,18 +53,29 @@ fun HomeScreen(
     val query by viewModel.searchQuery.collectAsState()
 
     val filteredRooms = remember(chatRooms, query) {
-        chatRooms.filter { room ->
-            val displayName =
-                if (room.group) room.groupName ?: ""
-                else {
-                    val otherId = room.userIds.firstOrNull { it != currentUserId }
-                    otherId?.let { id -> viewModel.getCachedUserName(id) } ?: ""
-                }
+        chatRooms
+            .filter { room ->
+                val displayName =
+                    if (room.group) room.groupName ?: ""
+                    else {
+                        val otherId = room.userIds.firstOrNull { it != currentUserId }
+                        otherId?.let { id -> viewModel.getCachedUserName(id) } ?: ""
+                    }
 
-            displayName.contains(query, ignoreCase = true)
-        }
+                displayName.contains(query, ignoreCase = true)
+            }
+            .sortedByDescending { it.lastMessageTimestamp }
     }
 
+
+    LaunchedEffect(Unit) {
+        activity.initZegoInviteService(
+            appID = ZegoConfig.appId,
+            appSign = ZegoConfig.appSign,
+            userID = currentUserId,
+            userName = FirebaseAuth.getInstance().currentUser?.email ?: currentUserId
+        )
+    }
     LaunchedEffect(currentUserId) {
         viewModel.listenChatRooms(currentUserId)
     }
@@ -311,18 +330,29 @@ fun ChatRoomItem(
     currentUserId: String,
     getUserById: suspend (String) -> User?,
     cacheUser: (User) -> Unit,
+    viewmodel: HomeViewModel = hiltViewModel()
 ) {
-    var otherUser by remember { mutableStateOf<User?>(null) }
+    val userMap by viewmodel.userMap.collectAsState()
+    val otherId = room.userIds.firstOrNull { it != currentUserId }
+    val unreadCount = room.unread[currentUserId] ?: 0
 
-    LaunchedEffect(room.chatroomId) {
-        if (!room.group) {
-            val otherId = room.userIds.firstOrNull { it != currentUserId }
-            if (otherId != null) {
-                otherUser = getUserById(otherId)
-                cacheUser(otherUser!!)
+    LaunchedEffect(otherId) {
+        if (otherId != null) {
+            val cached = userMap[otherId]
+            if (cached != null) {
+                cacheUser(cached)
+                return@LaunchedEffect
+            }
+
+            val user = viewmodel.getUserById(otherId)
+            if (user != null) {
+                cacheUser(user)
+                viewmodel.loadUserIfNeeded(otherId)
             }
         }
     }
+
+    val otherUser = userMap[otherId]
 
     val displayName = when {
         room.group -> room.groupName ?: "Nhóm không tên"
@@ -334,12 +364,17 @@ fun ChatRoomItem(
         else -> otherUser?.avtUrl
     }
 
-    val lastTime = android.text.format.DateUtils.getRelativeTimeSpanString(room.lastMessageTimestamp)
+    val lastTime = DateUtils.getRelativeTimeSpanString(room.lastMessageTimestamp)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -369,18 +404,67 @@ fun ChatRoomItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(Modifier.weight(1f)) {
-                Text(displayName, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    room.lastMessage ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1
+                    text = displayName,
+                    style = if (unreadCount > 0)
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    else
+                        MaterialTheme.typography.titleMedium
                 )
+
+                when {
+                    unreadCount == 0 -> {
+                        Text(
+                            text = room.lastMessage ?: "",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.Gray),
+                            maxLines = 1
+                        )
+                    }
+
+                    unreadCount == 1 -> {
+                        Text(
+                            text = room.lastMessage ?: "",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            ),
+                            maxLines = 1
+                        )
+                    }
+
+                    unreadCount > 1 -> {
+                        Text(
+                            text = "$unreadCount tin nhắn mới",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1976D2)
+                            )
+                        )
+                    }
+                }
             }
 
-            Text(
-                lastTime.toString(),
-                style = MaterialTheme.typography.labelSmall
-            )
+            Row(
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxHeight(),
+            ) {
+                Text(
+                    lastTime.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (unreadCount > 0) Color.Black else Color.Gray
+                )
+                if (unreadCount > 0) {
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color.Red, CircleShape)
+                    )
+                }
+            }
         }
     }
 }

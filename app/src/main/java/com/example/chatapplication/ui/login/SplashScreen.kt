@@ -4,6 +4,7 @@ import android.view.animation.OvershootInterpolator
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -54,38 +55,55 @@ fun SplashScreen(navController: NavController, viewModel: AuthViewModel,onFinish
 
     Box(
         modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "App Logo",
+                contentDescription = "Logo",
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(140.dp)
                     .scale(scaleAnim.value)
                     .alpha(alphaAnim.value)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
             Text(
                 text = "Chat App",
                 style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 38.sp
                 ),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.alpha(alphaAnim.value)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = "Kết nối dễ dàng, trò chuyện mọi lúc",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.alpha(alphaAnim.value)
+            )
+
+            Spacer(modifier = Modifier.height(30.dp))
+
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(6.dp)
+                    .alpha(alphaAnim.value),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
             )
         }
     }

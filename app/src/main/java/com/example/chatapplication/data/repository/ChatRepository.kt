@@ -2,6 +2,7 @@ package com.example.chatapplication.data.repository
 
 import android.util.Log
 import com.example.chatapplication.SupabaseManager
+import com.example.chatapplication.data.model.CallSession
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.data.model.ChatRoom
 import com.example.chatapplication.data.model.User
@@ -23,22 +24,33 @@ class ChatRepository @Inject constructor(
     private val chatRoomRef = db.collection("chatrooms")
     private val userRef = db.collection("users")
 
+    private val callRef = db.collection("calls")
+
     suspend fun sendMessage(roomId: String, message: ChatMessage) {
-        val docRef = chatRoomRef.document(roomId)
-            .collection("chats")
-            .document()
+        val roomRef = chatRoomRef.document(roomId)
+        roomRef.collection("chats").add(message).await()
 
-        val msgWithId = message.copy(messageId = docRef.id)
-
-        docRef.set(msgWithId).await()
-
-        chatRoomRef.document(roomId).update(
+        roomRef.update(
             mapOf(
-                "lastMessage" to msgWithId.message,
-                "lastMessageSenderId" to msgWithId.senderId,
-                "lastMessageTimestamp" to msgWithId.timestamp,
+                "lastMessage" to message.message,
+                "lastMessageSenderId" to message.senderId,
+                "lastMessageTimestamp" to message.timestamp
             )
         )
+
+        val room = roomRef.get().await().toObject(ChatRoom::class.java)
+
+        room?.userIds?.forEach { uid ->
+            if (uid != message.senderId) {
+                roomRef.update("unread.$uid", FieldValue.increment(1)).await()
+            }
+        }
+    }
+
+    suspend fun markAsRead(roomId: String, userId: String) {
+        chatRoomRef.document(roomId)
+            .update("unread.$userId", 0)
+            .await()
     }
 
     fun getMessages(roomId: String) = callbackFlow {
@@ -56,16 +68,6 @@ class ChatRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-//    suspend fun sendFileMessage(roomId: String, senderId: String, senderName: String, senderAvatar: String, fileUrl: String, fileType: String) {
-//        val message = ChatMessage(
-//            senderId = senderId,
-//            senderName = senderName,
-//            senderAvatar = senderAvatar,
-//            messageType = fileType,
-//            fileUrl = fileUrl
-//        )
-//        sendMessage(roomId, message)
-//    }
     fun getUserChatRooms(userId: String) = callbackFlow {
         val listener = chatRoomRef
             .whereArrayContains("userIds", userId)
@@ -100,13 +102,15 @@ class ChatRepository @Inject constructor(
             .whereArrayContains("userIds", currentUserId)
             .get()
             .await()
-            .documents.find { doc ->
-                val users = doc.get("userIds") as? List<*>
-                users?.contains(otherUserId) == true
+            .documents
+            .mapNotNull { it.toObject(ChatRoom::class.java) to it.id }
+            .find { (room, _) ->
+                room!!.group == false && room!!.userIds.contains(otherUserId)
             }
 
         if (existing != null) {
-            return existing.id to otherUserId
+            val (room, roomId) = existing
+            return roomId to otherUserId
         }
 
         val docRef = chatRoomRef.document()
@@ -114,7 +118,8 @@ class ChatRepository @Inject constructor(
             chatroomId = docRef.id,
             lastMessageSenderId = "",
             lastMessageTimestamp = System.currentTimeMillis(),
-            userIds = listOf(currentUserId, otherUserId)
+            userIds = listOf(currentUserId, otherUserId),
+            group = false
         )
 
         docRef.set(newRoom).await()
@@ -243,5 +248,145 @@ class ChatRepository @Inject constructor(
         return bucket.publicUrl(fileName)
     }
 
+    suspend fun uploadFileToSupabase(
+        inputStream: InputStream,
+        extension: String
+    ): String {
+        val bucket = SupabaseManager.client.storage.from("chat_files")
+        val fileName = "chat_${UUID.randomUUID()}.$extension"
+        bucket.upload(
+            path = fileName,
+            data = inputStream.readBytes(),
+            upsert = false
+        )
+        return bucket.publicUrl(fileName)
+    }
+
+    suspend fun sendImageMessage(
+        roomId: String,
+        senderId: String,
+        imageUrl: String
+    ) {
+        val message = ChatMessage(
+            senderId = senderId,
+            message = "[Ảnh]",
+            type = "image",
+            fileUrl = imageUrl
+        )
+        sendMessage(roomId, message)
+    }
+
+    suspend fun sendFileMessage(
+        roomId: String,
+        senderId: String,
+        fileUrl: String,
+        fileName: String,
+        fileSize: Long
+    ) {
+        val message = ChatMessage(
+            senderId = senderId,
+            message = "[Tệp $fileName]",
+            type = "file",
+            fileUrl = fileUrl,
+            fileName = fileName,
+            fileSize = fileSize
+        )
+        sendMessage(roomId, message)
+    }
+    suspend fun sendVideoMessage(
+        roomId: String,
+        senderId: String,
+        videoUrl: String
+    ) {
+        val message = ChatMessage(
+            senderId = senderId,
+            message = "[Video]",
+            type = "video",
+            fileUrl = videoUrl
+        )
+        sendMessage(roomId, message)
+    }
+    suspend fun sendAudioMessage(
+        roomId: String,
+        senderId: String,
+        audioUrl: String
+    ) {
+        val message = ChatMessage(
+            senderId = senderId,
+            message = "[Audio]",
+            type = "audio",
+            fileUrl = audioUrl
+        )
+        sendMessage(roomId, message)
+    }
+
+    suspend fun uploadAndSendFileMessage(
+        roomId: String,
+        senderId: String,
+        inputStream: InputStream,
+        fileName: String,
+        extension: String,
+        size: Long
+    ) {
+        val url = uploadFileToSupabase(inputStream, extension)
+        sendFileMessage(roomId, senderId, url, fileName, size)
+    }
+
+    //call
+    suspend fun createCallSession(
+        roomId: String,
+        callerId: String,
+        targetUserIds: List<String>,
+        type: String // "voice" | "video"
+    ): String {
+        val callId = UUID.randomUUID().toString()
+
+        val session = CallSession(
+            callId = callId,
+            roomId = roomId,
+            callerId = callerId,
+            targetIds = targetUserIds,
+            callType = type
+        )
+
+        callRef.document(callId).set(session).await()
+
+        return callId
+    }
+
+    suspend fun updateCallStatus(callId: String, status: String) {
+        callRef.document(callId)
+            .update("status", status)
+            .await()
+    }
+
+    suspend fun startOneToOneCall(
+        roomId: String,
+        callerId: String,
+        targetId: String,
+        type: String
+    ): String {
+        return createCallSession(
+            roomId = roomId,
+            callerId = callerId,
+            targetUserIds = listOf(targetId),
+            type = type
+        )
+    }
+
+    suspend fun startGroupCall(
+        roomId: String,
+        callerId: String,
+        memberIds: List<String>,
+        type: String
+    ): String {
+        val others = memberIds.filter { it != callerId }
+        return createCallSession(
+            roomId = roomId,
+            callerId = callerId,
+            targetUserIds = others,
+            type = type
+        )
+    }
 
 }

@@ -46,6 +46,14 @@ sealed class Screen(val route: String) {
         fun createRoute(roomId: String) = "group_info/$roomId"
     }
 
+    object Call : Screen("call/{callId}") {
+        fun createRoute(callId: String) = "call/$callId"
+    }
+
+    object VideoCall : Screen("video_call/{callId}") {
+        fun createRoute(callId: String) = "video_call/$callId"
+    }
+
 }
 
 @Composable
@@ -54,7 +62,6 @@ fun AppNavGraph(navController: NavHostController) {
     val chatViewModel : ChatViewModel = hiltViewModel()
     val profileViewModel : ProfileViewModel = hiltViewModel()
     val homeViewModel : HomeViewModel = hiltViewModel()
-    val currentUser by authViewModel.currentUser.collectAsState()
     val splashFinished = remember { mutableStateOf(false) }
 
 
@@ -111,6 +118,7 @@ fun AppNavGraph(navController: NavHostController) {
                     currentUserId = currentUser!!.uid,
                     otherUserId = otherUserId,
                     roomId = roomId,
+                    onBack = { navController.popBackStack() },
                     viewModel = chatViewModel,
                     homeViewModel = homeViewModel
                 )
@@ -131,6 +139,7 @@ fun AppNavGraph(navController: NavHostController) {
                     navController = navController,
                     currentUserId = currentUser!!.uid,
                     roomId = roomId,
+                    onBack = { navController.popBackStack() },
                     viewModel = chatViewModel
                 )
             }

@@ -66,6 +66,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation(libs.material)
     implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
     implementation("androidx.navigation:navigation-compose:2.8.0")
@@ -82,8 +83,10 @@ dependencies {
     //zego
     implementation("com.github.ZEGOCLOUD:zego_inapp_chat_uikit_android:+")
     implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
-
+    implementation("com.guolindev.permissionx:permissionx:1.8.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-video:2.4.0")
+
 
     //supabase
     implementation("io.github.jan-tennert.supabase:storage-kt:2.0.1")

@@ -9,5 +9,6 @@ data class ChatRoom(
     val groupAvt: String? = null,
     val userIds: List<String> = emptyList(),
     val adminIds: List<String> = emptyList(),
-    val lastMessage: String = ""
+    val lastMessage: String = "",
+    val unread: Map<String, Int> = emptyMap()
 )

@@ -31,6 +31,10 @@ class HomeViewModel @Inject constructor(
 
     private val _onlineUsers = MutableStateFlow<List<User>>(emptyList())
     val onlineUsers: StateFlow<List<User>> = _onlineUsers
+
+    private val _userMap = MutableStateFlow<Map<String, User>>(emptyMap())
+    val userMap: StateFlow<Map<String, User>> = _userMap
+
     private val userCache = mutableMapOf<String, User>()
 
     init {
@@ -71,6 +75,19 @@ class HomeViewModel @Inject constructor(
             null
         }
     }
+
+    fun loadUserIfNeeded(userId: String, onCache: (User) -> Unit = {}) {
+        if (_userMap.value.containsKey(userId)) return
+
+        viewModelScope.launch {
+            val user = getUserById(userId)
+            if (user != null) {
+                _userMap.value = _userMap.value + (userId to user)
+                onCache(user)
+            }
+        }
+    }
+
 
     fun listenChatRooms(userId: String) {
         viewModelScope.launch {

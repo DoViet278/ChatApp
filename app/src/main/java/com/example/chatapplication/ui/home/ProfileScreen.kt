@@ -24,8 +24,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,12 +44,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.chatapplication.R
 import com.example.chatapplication.Screen
 import com.example.chatapplication.ui.viewmodel.AuthViewModel
 import com.example.chatapplication.ui.viewmodel.ProfileViewModel
@@ -83,7 +90,6 @@ fun ProfileScreen(
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
-        Log.d("ảnh","$bitmap")
         bitmap?.let {
             Toast.makeText(context, "Thành công", Toast.LENGTH_SHORT)
                 .show()
@@ -160,42 +166,40 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            FieldWithEditButton(
+            FieldRow(
                 label = "Họ tên",
                 value = name,
                 editable = editName,
-                onEditClick = { editName = !editName },
-                onValueChange = { name = it }
+                onEditClick = { editName = true },
+                onValueChange = { name = it },
+                onSaveClick = { editName = false }
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            FieldWithEditButton(
+            FieldRow(
                 label = "Email",
                 value = email,
                 editable = editEmail,
-                onEditClick = { editEmail = !editEmail },
-                onValueChange = { email = it }
+                onEditClick = { editEmail = true },
+                onValueChange = { email = it },
+                onSaveClick = { editEmail = false }
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            FieldWithEditButton(
+            FieldRow(
                 label = "Số điện thoại",
                 value = sdt,
                 editable = editSdt,
-                onEditClick = { editSdt = !editSdt },
-                onValueChange = { sdt = it }
+                onEditClick = { editSdt = true },
+                onValueChange = { sdt = it },
+                onSaveClick = { editSdt = false }
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            FieldWithEditButton(
+            FieldRow(
                 label = "Ngày sinh",
                 value = birthday,
                 editable = editBirthday,
-                onEditClick = { editBirthday = !editBirthday },
-                onValueChange = { birthday = it }
+                onEditClick = { editBirthday = true },
+                onValueChange = { birthday = it },
+                onSaveClick = { editBirthday = false }
             )
 
             Spacer(Modifier.height(20.dp))
@@ -230,51 +234,113 @@ fun ProfileScreen(
                     title = { Text("Thay đổi ảnh đại diện") },
                     text = {
                         Column {
-                            TextButton(onClick = {
-                                showDialog = false
-                                permissionLauncher.launch(Manifest.permission.CAMERA)
-                            }) { Text("📷 Chụp ảnh") }
-                            TextButton(onClick = {
-                                showDialog = false
-                                galleryLauncher.launch("image/*")
-                            }) { Text("🖼️ Chọn từ thư viện") }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showDialog = false
+                                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_cam),
+                                    contentDescription = "Camera",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Chụp ảnh", style = MaterialTheme.typography.bodyLarge)
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showDialog = false
+                                        galleryLauncher.launch("image/*")
+                                    }
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_gallery),
+                                    contentDescription = "Gallery",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Chọn từ thư viện", style = MaterialTheme.typography.bodyLarge)
+                            }
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = { showDialog = false }) { Text("Đóng") }
+                        TextButton(onClick = { showDialog = false }) {
+                            Text("Đóng")
+                        }
                     }
                 )
+
             }
         }
     }
 }
 
 @Composable
-fun FieldWithEditButton(
+fun FieldRow(
     label: String,
     value: String,
     editable: Boolean,
     onEditClick: () -> Unit,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    onSaveClick: () -> Unit
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        TextField(
-            value = value,
-            onValueChange = { if (editable) onValueChange(it) },
-            label = { Text(label) },
-            modifier = Modifier.weight(1f),
-            enabled = editable,
-            singleLine = true
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Gray
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        TextButton(onClick = onEditClick) {
-            Text(if (editable) "Lưu" else "Sửa")
+
+        Spacer(Modifier.height(4.dp))
+
+        if (!editable) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    value.ifBlank { "Chưa cập nhật" },
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+
+                IconButton(onClick = onEditClick) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                }
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+
+                TextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.width(8.dp))
+
+                TextButton(onClick = onSaveClick) {
+                    Text("Lưu")
+                }
+            }
         }
     }
 }
+
 
 fun saveBitmapToUri(context: Context, bitmap: Bitmap): Uri? {
     val filename = "avatar_${System.currentTimeMillis()}.jpg"
