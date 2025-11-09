@@ -2,10 +2,12 @@ package com.example.chatapplication.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.chatapplication.CallStateHolder
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.data.model.ChatRoom
 import com.example.chatapplication.data.model.User
 import com.example.chatapplication.data.repository.ChatRepository
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -75,6 +77,11 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun sendCallMessage(roomId: String, userId: String){
+        viewModelScope.launch {
+            chatRepository.sendCallMessage(roomId,userId)
+        }
+    }
     fun sendImage(roomId: String, userId: String, input: InputStream, ext: String) {
         viewModelScope.launch {
             val url = chatRepository.uploadFileToSupabase(input, ext)
@@ -104,17 +111,13 @@ class ChatViewModel @Inject constructor(
     }
 
     //call
-    fun startVoiceCall(roomId: String, myId: String, otherId: String, onResult: (String) -> Unit) {
+    fun createCallLog(roomId: String, myId: String, targetIds: List<String>, type: String, onDone: (String) -> Unit) {
         viewModelScope.launch {
-            val callId = chatRepository.startOneToOneCall(roomId, myId, otherId, "voice")
-            onResult(callId)
-        }
-    }
-
-    fun startVideoCall(roomId: String, myId: String, otherId: String, onResult: (String) -> Unit) {
-        viewModelScope.launch {
-            val callId = chatRepository.startOneToOneCall(roomId, myId, otherId, "video")
-            onResult(callId)
+            val callId = "call_${System.currentTimeMillis()}"
+            chatRepository.createCallLog(roomId, callId, myId, targetIds, type)
+            CallStateHolder.callType = type
+            CallStateHolder.currentUserCall = myId
+            onDone(callId)
         }
     }
 

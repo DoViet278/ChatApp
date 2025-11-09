@@ -276,6 +276,19 @@ class ChatRepository @Inject constructor(
         sendMessage(roomId, message)
     }
 
+    suspend fun  sendCallMessage(
+        roomId: String,
+        senderId: String
+    ){
+        val message = ChatMessage(
+            senderId = senderId,
+            message = "[Cuộc gọi]",
+            type = "call"
+        )
+        sendMessage(roomId, message)
+
+    }
+
     suspend fun sendFileMessage(
         roomId: String,
         senderId: String,
@@ -333,60 +346,52 @@ class ChatRepository @Inject constructor(
     }
 
     //call
-    suspend fun createCallSession(
+    suspend fun createCallLog(
+        roomId: String,
+        callId: String,
+        callerId: String,
+        targetIds: List<String>,
+        callType: String
+    ) {
+        val log = hashMapOf(
+            "callId" to callId,
+            "roomId" to roomId,
+            "callerId" to callerId,
+            "targetIds" to targetIds,
+            "callType" to callType,
+            "timestamp" to System.currentTimeMillis(),
+            "status" to "ongoing"
+        )
+
+        FirebaseFirestore.getInstance()
+            .collection("chatrooms")
+            .document(roomId)
+            .collection("calls")
+            .document(callId)
+            .set(log)
+    }
+
+    suspend fun addCallMessage(
         roomId: String,
         callerId: String,
-        targetUserIds: List<String>,
-        type: String // "voice" | "video"
-    ): String {
-        val callId = UUID.randomUUID().toString()
-
-        val session = CallSession(
+        callId: String,
+        callType: String,
+        status: String
+    ) {
+        val msg = ChatMessage(
+            senderId = callerId,
+            timestamp = System.currentTimeMillis(),
+            type = "call",
             callId = callId,
-            roomId = roomId,
-            callerId = callerId,
-            targetIds = targetUserIds,
-            callType = type
+            callType = callType,
+            callStatus = status
         )
 
-        callRef.document(callId).set(session).await()
-
-        return callId
-    }
-
-    suspend fun updateCallStatus(callId: String, status: String) {
-        callRef.document(callId)
-            .update("status", status)
-            .await()
-    }
-
-    suspend fun startOneToOneCall(
-        roomId: String,
-        callerId: String,
-        targetId: String,
-        type: String
-    ): String {
-        return createCallSession(
-            roomId = roomId,
-            callerId = callerId,
-            targetUserIds = listOf(targetId),
-            type = type
-        )
-    }
-
-    suspend fun startGroupCall(
-        roomId: String,
-        callerId: String,
-        memberIds: List<String>,
-        type: String
-    ): String {
-        val others = memberIds.filter { it != callerId }
-        return createCallSession(
-            roomId = roomId,
-            callerId = callerId,
-            targetUserIds = others,
-            type = type
-        )
+        FirebaseFirestore.getInstance()
+            .collection("chatrooms")
+            .document(roomId)
+            .collection("messages")
+            .add(msg)
     }
 
 }

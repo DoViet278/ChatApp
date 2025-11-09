@@ -247,7 +247,8 @@ fun ProfileScreen(
                                 Icon(
                                     painter = painterResource(R.drawable.ic_cam),
                                     contentDescription = "Camera",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Text("Chụp ảnh", style = MaterialTheme.typography.bodyLarge)
@@ -268,7 +269,8 @@ fun ProfileScreen(
                                 Icon(
                                     painter = painterResource(R.drawable.ic_gallery),
                                     contentDescription = "Gallery",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Text("Chọn từ thư viện", style = MaterialTheme.typography.bodyLarge)

@@ -102,4 +102,11 @@ dependencies {
     //material
     implementation("androidx.compose.material:material:1.6.0")
     implementation("androidx.compose.material3:material3:1.2.0")
+
+    //openai
+    implementation("com.aallam.openai:openai-client:3.8.1")
+    implementation("io.ktor:ktor-client-okhttp:2.3.4")
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+
+
 }

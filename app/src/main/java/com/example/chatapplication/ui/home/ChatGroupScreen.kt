@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -35,6 +36,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.example.chatapplication.CallStateHolder
 import com.example.chatapplication.MainActivity
 import com.example.chatapplication.R
 import com.example.chatapplication.Screen
@@ -149,24 +151,56 @@ fun GroupChatScreen(
                         }
                     },
                     actions = {
-                        CallButton(isVideoCall = false) { btn ->
+                        CallButton(isVideoCall = false, onClick = {viewModel.sendCallMessage(roomId, currentUserId)}) { btn ->
                             val invitees = usersInRoom
                                 .filter { it.uid != currentUserId }
                                 .map { user -> ZegoUIKitUser(user.uid, user.name ?: user.uid) }
                                 .toMutableList()
 
-                            if (invitees.isNotEmpty()) btn.setInvitees(invitees)
+                            val targetIds = usersInRoom
+                                .filter { it.uid != currentUserId }
+                                .map { it.uid }
+
+                            viewModel.createCallLog(
+                                roomId = roomId,
+                                myId = currentUserId,
+                                targetIds = targetIds,
+                                type = "voice"
+                            ) { callId ->
+
+                                CallStateHolder.currentRoomId = roomId
+                                CallStateHolder.currentCallId = callId
+
+                                if (invitees.isNotEmpty()) btn.setInvitees(invitees)
+                            }
                         }
 
                         Spacer(Modifier.width(8.dp))
 
-                        CallButton(isVideoCall = true) { btn ->
+                        CallButton(isVideoCall = true, onClick = {viewModel.sendCallMessage(roomId, currentUserId)}) { btn ->
                             val invitees = usersInRoom
                                 .filter { it.uid != currentUserId }
                                 .map { user -> ZegoUIKitUser(user.uid, user.name ?: user.uid) }
                                 .toMutableList()
 
-                            if (invitees.isNotEmpty()) btn.setInvitees(invitees)
+                            val targetIds = usersInRoom
+                                .filter { it.uid != currentUserId }
+                                .map { it.uid }
+
+                            viewModel.createCallLog(
+                                roomId = roomId,
+                                myId = currentUserId,
+                                targetIds = targetIds,
+                                type = "video"
+                            ) { callId ->
+
+                                CallStateHolder.currentRoomId = roomId
+                                CallStateHolder.currentCallId = callId
+
+                                if (invitees.isNotEmpty()) btn.setInvitees(invitees)
+                            }
+
+
                         }
                         IconButton(onClick = { showSearch = !showSearch }) {
                             Icon(
@@ -208,7 +242,7 @@ fun GroupChatScreen(
                 reverseLayout = true,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val reversed =filteredMessages.reversed()
+                val reversed = filteredMessages.reversed()
                 items(reversed) { msg ->
                     val sender = usersInRoom.find { it.uid == msg.senderId }
                     val isMe = msg.senderId == currentUserId
@@ -432,7 +466,45 @@ fun MessageBubbleGroup(
                             )
                         }
                     }
+                    "call" -> {
+                        val icon = if (msg.callType == "video")
+                            painterResource(R.drawable.ic_video_call)
+                        else
+                            painterResource(R.drawable.ic_phone_call)
 
+                        val statusText = when (msg.callStatus) {
+                            "missed" -> "Cuộc gọi nhỡ"
+                            "ended"  -> if (msg.callType == "video") "Cuộc gọi video" else "Cuộc gọi thoại"
+                            else     -> "Cuộc gọi"
+                        }
+
+                        val label = if (isMe) {
+                            statusText
+                        } else {
+                            "${sender?.name} • $statusText"
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(6.dp)
+                                .wrapContentWidth()
+                        ) {
+                            Icon(
+                                painter = icon,
+                                contentDescription = null,
+                                tint = if (isMe) Color.White else Color.Black,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+
+                            Text(
+                                label,
+                                color = if (isMe) Color.White else Color.Black,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(

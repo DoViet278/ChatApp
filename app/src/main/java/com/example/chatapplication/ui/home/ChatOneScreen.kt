@@ -45,6 +45,7 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
+import com.example.chatapplication.CallStateHolder
 import com.example.chatapplication.MainActivity
 import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.ui.viewmodel.ChatViewModel
@@ -165,8 +166,17 @@ fun ChatOneScreen(
                         }
                     },
                     actions = {
-                        CallButton(isVideoCall = false) { btn ->
-                            if (otherUserId.isNotEmpty()) {
+                        CallButton(isVideoCall = false, onClick = {viewModel.sendCallMessage(roomId, currentUserId)}) { btn ->
+                            viewModel.createCallLog(
+                                roomId = roomId,
+                                myId = currentUserId,
+                                targetIds = listOf(otherUserId),
+                                type = "voice"
+                            ) { callId ->
+
+                                CallStateHolder.currentRoomId = roomId
+                                CallStateHolder.currentCallId = callId
+
                                 btn.setInvitees(
                                     mutableListOf(
                                         ZegoUIKitUser(
@@ -180,8 +190,17 @@ fun ChatOneScreen(
 
                         Spacer(Modifier.width(8.dp))
 
-                        CallButton(isVideoCall = true) { btn ->
-                            if (otherUserId.isNotEmpty()) {
+                        CallButton(isVideoCall = true,onClick = {viewModel.sendCallMessage(roomId, currentUserId)}) { btn ->
+                            viewModel.createCallLog(
+                                roomId = roomId,
+                                myId = currentUserId,
+                                targetIds = listOf(otherUserId),
+                                type = "video"
+                            ) { callId ->
+
+                                CallStateHolder.currentRoomId = roomId
+                                CallStateHolder.currentCallId = callId
+
                                 btn.setInvitees(
                                     mutableListOf(
                                         ZegoUIKitUser(
@@ -193,9 +212,7 @@ fun ChatOneScreen(
                             }
                         }
 
-
                         Spacer(Modifier.width(4.dp))
-
                         IconButton(onClick = { showSearch = !showSearch }) {
                             Icon(
                                 imageVector = Icons.Default.Search,
@@ -452,6 +469,40 @@ fun MessageBubblePrivate(
                                 .size(48.dp)
                                 .align(Alignment.Center)
                         )
+                    }
+                    "call" -> {
+                        val callIcon = if (msg.callType == "video")
+                            painterResource(R.drawable.ic_video_call)
+                        else
+                            painterResource(R.drawable.ic_phone_call)
+
+                        val text = when (msg.callStatus) {
+                            "missed" -> "Cuộc gọi nhỡ"
+                            "ended"  -> if (msg.callType == "video") "Cuộc gọi video" else "Cuộc gọi thoại"
+                            else     -> "Cuộc gọi"
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(6.dp)
+                                .wrapContentWidth()
+                        ) {
+                            Icon(
+                                painter = callIcon,
+                                contentDescription = null,
+                                tint = if (isMe) Color.White else Color.Black,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+
+                            Text(
+                                text,
+                                color = if (isMe) Color.White else Color.Black,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
                     }
 
                 }

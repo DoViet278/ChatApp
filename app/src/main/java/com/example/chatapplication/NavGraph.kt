@@ -1,6 +1,8 @@
 package com.example.chatapplication
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,6 +14,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.chatapplication.ui.home.ChatBotScreen
 import com.example.chatapplication.ui.home.ChatOneScreen
 import com.example.chatapplication.ui.home.GroupChatInfoScreen
 import com.example.chatapplication.ui.home.GroupChatScreen
@@ -24,6 +27,7 @@ import com.example.chatapplication.ui.login.RegisterScreen
 import com.example.chatapplication.ui.login.SplashScreen
 import com.example.chatapplication.ui.viewmodel.HomeViewModel
 import com.example.chatapplication.ui.viewmodel.ProfileViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 
 sealed class Screen(val route: String) {
@@ -53,6 +57,8 @@ sealed class Screen(val route: String) {
     object VideoCall : Screen("video_call/{callId}") {
         fun createRoute(callId: String) = "video_call/$callId"
     }
+
+    object ChatBot : Screen("chat_bot")
 
 }
 
@@ -100,6 +106,10 @@ fun AppNavGraph(navController: NavHostController) {
         }
         composable(Screen.Profile.route) {
             ProfileScreen(navController, profileViewModel,authViewModel)
+        }
+
+        composable(Screen.ChatBot.route) {
+            ChatBotScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

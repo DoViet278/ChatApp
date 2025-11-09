@@ -19,6 +19,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.chatapplication.data.model.ChatMessage
 import com.example.chatapplication.ui.home.HomeScreen
 import com.example.chatapplication.ui.login.LoginScreen
 import com.example.chatapplication.ui.login.RegisterScreen
@@ -101,11 +102,40 @@ class MainActivity : FragmentActivity() {
         ZegoUIKitPrebuiltCallService.enableFCMPush()
 
         ZegoUIKitPrebuiltCallService.events.callEvents.callEndListener =
-            CallEndListener { callEndReason: ZegoCallEndReason?, jsonObject: String? ->
-                Timber.d(
-                    "Call Ended with reason: $callEndReason and json: $jsonObject"
-                )
+            CallEndListener { reason: ZegoCallEndReason?, json: String? ->
+
+                val roomId = CallStateHolder.currentRoomId
+                val callId = CallStateHolder.currentCallId
+                val currentUserId = CallStateHolder.currentUserCall
+                val type = CallStateHolder.callType
+
+                val status = if (reason != null) "ended" else "missed"
+
+                FirebaseFirestore.getInstance()
+                    .collection("chatrooms")
+                    .document(roomId)
+                    .collection("calls")
+                    .document(callId)
+                    .update("status", status)
+
+                FirebaseFirestore.getInstance()
+                    .collection("chatrooms")
+                    .document(roomId)
+                    .collection("chats")
+                    .add(
+                        ChatMessage(
+                            senderId = currentUserId,
+                            timestamp = System.currentTimeMillis(),
+                            message = "Call ended",
+                            type = "call",
+                            callId = callId,
+                            callType = type,
+                            callStatus = status
+                        )
+                    )
+
             }
+
     }
 
     override fun onDestroy() {

@@ -1,6 +1,7 @@
 package com.example.chatapplication.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -14,13 +15,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.chatapplication.R
+import com.example.chatapplication.ui.viewmodel.ChatViewModel
 import com.zegocloud.uikit.prebuilt.call.invite.widget.ZegoSendCallInvitationButton
 
 @Composable
 fun CallButton(
     isVideoCall: Boolean,
-    onInit: (ZegoSendCallInvitationButton) -> Unit
+    onClick: ()-> Unit,
+    onInit: (ZegoSendCallInvitationButton) -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -36,7 +40,7 @@ fun CallButton(
             ),
             contentDescription = null,
             tint = Color(0xFF2196F3),
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(22.dp).clickable(onClick = onClick)
         )
 
         AndroidView(
@@ -49,7 +53,9 @@ fun CallButton(
                     resourceID = "zego_data"
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     background = null
-                    onInit(this)
+                    setOnClickListener {
+                        onInit(this)
+                    }
                 }
             }
         )

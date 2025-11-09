@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -34,7 +35,7 @@ import com.example.chatapplication.data.model.ChatRoom
 import com.example.chatapplication.data.model.User
 import com.example.chatapplication.ui.viewmodel.HomeViewModel
 import com.google.firebase.auth.FirebaseAuth
-
+import com.example.chatapplication.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +87,17 @@ fun HomeScreen(
                 TopAppBar(
                     title = { Text("Chats") },
                     actions = {
+                        IconButton(onClick = {
+                            navController.navigate(Screen.ChatBot.route)
+                        }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_gemini),
+                                contentDescription = "Chat bot",
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
                         IconButton(onClick = { navController.navigate(Screen.Profile.route) }) {
                             Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
                         }
