@@ -54,10 +54,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.chatapplication.R
 import com.example.chatapplication.data.model.ChatRoom
 import com.example.chatapplication.data.model.User
 import com.example.chatapplication.ui.viewmodel.AuthViewModel
@@ -260,7 +262,7 @@ fun GroupChatInfoScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.DateRange,
+                            painter = painterResource(R.drawable.ic_cam),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
@@ -285,7 +287,7 @@ fun GroupChatInfoScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.DateRange,
+                            painter = painterResource(R.drawable.ic_gallery),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
