@@ -24,10 +24,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -70,276 +74,216 @@ fun ProfileScreen(
     val isUploading by viewModel.isUploading.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        user?.let {
-            viewModel.loadUser(it.uid)
-        }
-    }
+    LaunchedEffect(Unit) { user?.let { viewModel.loadUser(it.uid) } }
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ){uri: Uri? ->
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val inputSteam: InputStream? = context.contentResolver.openInputStream(it)
-            inputSteam?.let { steam ->
-                viewModel.uploadAvatar(steam,"jpg")
+            context.contentResolver.openInputStream(it)?.let { stream ->
+                viewModel.uploadAvatar(stream, "jpg")
             }
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         bitmap?.let {
-            Toast.makeText(context, "Thành công", Toast.LENGTH_SHORT)
-                .show()
-            val uri = saveBitmapToUri(context, bitmap)
-            uri?.let {
-                val inputStream = context.contentResolver.openInputStream(it)
-                inputStream?.let { stream ->
+            Toast.makeText(context, "Chụp thành công", Toast.LENGTH_SHORT).show()
+            saveBitmapToUri(context, it)?.let { uri ->
+                context.contentResolver.openInputStream(uri)?.let { stream ->
                     viewModel.uploadAvatar(stream, "jpg")
                 }
             }
         }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            cameraLauncher.launch(null)
-        } else {
-            Toast.makeText(context, "Cần quyền Camera để chụp ảnh", Toast.LENGTH_SHORT).show()
-        }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) cameraLauncher.launch(null)
+        else Toast.makeText(context, "Cần quyền camera", Toast.LENGTH_SHORT).show()
     }
 
-    profile?.let { user ->
-        var name by remember { mutableStateOf("") }
-        var email by remember { mutableStateOf("") }
-        var sdt by remember { mutableStateOf("") }
-        var birthday by remember { mutableStateOf("") }
-
-        LaunchedEffect(profile?.uid) {
-            profile?.let { user ->
-                name = user.name
-                email = user.email
-                sdt = user.sdt
-                birthday = user.birthday
-            }
-        }
+    profile?.let { userProfile ->
+        var name by remember { mutableStateOf(userProfile.name) }
+        var email by remember { mutableStateOf(userProfile.email) }
+        var sdt by remember { mutableStateOf(userProfile.sdt) }
+        var birthday by remember { mutableStateOf(userProfile.birthday) }
 
         var editName by remember { mutableStateOf(false) }
         var editEmail by remember { mutableStateOf(false) }
         var editSdt by remember { mutableStateOf(false) }
         var editBirthday by remember { mutableStateOf(false) }
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(Modifier.height(20.dp))
-
-            Box(contentAlignment = Alignment.Center) {
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        user.avtUrl.ifEmpty { "https://picsum.photos/id/1/200/300" }
-                    ),
-                    contentDescription = "Avatar",
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .clickable { showDialog = true },
-                    contentScale = ContentScale.Crop
+                .background(
+                    Color.White
                 )
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Profile",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
 
-                if (isUploading) {
-                    androidx.compose.material3.CircularProgressIndicator(
+                Spacer(Modifier.height(20.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(140.dp)
+                        .clip(CircleShape)
+                        .background(Color.White, CircleShape)
+                        .clickable { showDialog = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = rememberAsyncImagePainter(userProfile.avtUrl.ifEmpty { "https://picsum.photos/id/1/200/300" }),
+                        contentDescription = "Avatar",
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(40.dp)
-                            .align(Alignment.Center)
+                            .size(130.dp)
+                            .clip(CircleShape)
                     )
+
+                    if (isUploading) {
+                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(50.dp))
+                    }
                 }
+
+                Spacer(Modifier.height(24.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    FieldCard("Họ tên", name, editName, onEdit = { editName = true }, onValueChange = { name = it }, onSave = { editName = false })
+                    FieldCard("Email", email, editEmail, onEdit = { editEmail = true }, onValueChange = { email = it }, onSave = { editEmail = false })
+                    FieldCard("Số điện thoại", sdt, editSdt, onEdit = { editSdt = true }, onValueChange = { sdt = it }, onSave = { editSdt = false })
+                    FieldCard("Ngày sinh", birthday, editBirthday, onEdit = { editBirthday = true }, onValueChange = { birthday = it }, onSave = { editBirthday = false })
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Buttons
+                Button(
+                    onClick = {
+                        val updatedUser = userProfile.copy(name = name, email = email, sdt = sdt, birthday = birthday)
+                        viewModel.updateUser(updatedUser)
+                        Toast.makeText(context, "Cập nhật thành công!", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) { Text("Cập nhật") }
+
+                Spacer(Modifier.height(12.dp))
+
+                Button(
+                    onClick = { userViewModel.logout() },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) { Text("Đăng xuất") }
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            FieldRow(
-                label = "Họ tên",
-                value = name,
-                editable = editName,
-                onEditClick = { editName = true },
-                onValueChange = { name = it },
-                onSaveClick = { editName = false }
-            )
-
-            FieldRow(
-                label = "Email",
-                value = email,
-                editable = editEmail,
-                onEditClick = { editEmail = true },
-                onValueChange = { email = it },
-                onSaveClick = { editEmail = false }
-            )
-
-            FieldRow(
-                label = "Số điện thoại",
-                value = sdt,
-                editable = editSdt,
-                onEditClick = { editSdt = true },
-                onValueChange = { sdt = it },
-                onSaveClick = { editSdt = false }
-            )
-
-            FieldRow(
-                label = "Ngày sinh",
-                value = birthday,
-                editable = editBirthday,
-                onEditClick = { editBirthday = true },
-                onValueChange = { birthday = it },
-                onSaveClick = { editBirthday = false }
-            )
-
-            Spacer(Modifier.height(20.dp))
-
-            Button(
-                onClick = {
-                    val updatedUser = user.copy(
-                        name = name,
-                        email = email,
-                        sdt = sdt,
-                        birthday = birthday
-                    )
-                    viewModel.updateUser(updatedUser)
-                    Toast.makeText(context, "Cập nhật thành công!", Toast.LENGTH_SHORT).show()
-                }
-            ) {
-                Text("Cập nhật")
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            Button(
-                onClick = {
-                    userViewModel.logout()
-                }
-            ) {
-                Text("Đăng xuất")
-            }
+            // Dialog chọn ảnh
             if (showDialog) {
                 AlertDialog(
                     onDismissRequest = { showDialog = false },
                     title = { Text("Thay đổi ảnh đại diện") },
                     text = {
                         Column {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        showDialog = false
-                                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                                    }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_cam),
-                                    contentDescription = "Camera",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text("Chụp ảnh", style = MaterialTheme.typography.bodyLarge)
+                            OptionRow("Chụp ảnh", R.drawable.ic_cam) {
+                                showDialog = false
+                                permissionLauncher.launch(Manifest.permission.CAMERA)
                             }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        showDialog = false
-                                        galleryLauncher.launch("image/*")
-                                    }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_gallery),
-                                    contentDescription = "Gallery",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text("Chọn từ thư viện", style = MaterialTheme.typography.bodyLarge)
+                            Spacer(Modifier.height(8.dp))
+                            OptionRow("Chọn từ thư viện", R.drawable.ic_gallery) {
+                                showDialog = false
+                                galleryLauncher.launch("image/*")
                             }
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = { showDialog = false }) {
-                            Text("Đóng")
-                        }
+                        TextButton(onClick = { showDialog = false }) { Text("Đóng") }
                     }
                 )
-
             }
         }
     }
 }
 
 @Composable
-fun FieldRow(
+fun FieldCard(
     label: String,
     value: String,
     editable: Boolean,
-    onEditClick: () -> Unit,
+    onEdit: () -> Unit,
     onValueChange: (String) -> Unit,
-    onSaveClick: () -> Unit
+    onSave: () -> Unit
 ) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.Gray
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        if (!editable) {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    value.ifBlank { "Chưa cập nhật" },
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
-
-                IconButton(onClick = onEditClick) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+    androidx.compose.material3.Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(6.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+            Spacer(Modifier.height(4.dp))
+            if (!editable) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(value.ifBlank { "Chưa cập nhật" }, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Edit") }
                 }
-            }
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-
-                TextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-
-                Spacer(Modifier.width(8.dp))
-
-                TextButton(onClick = onSaveClick) {
-                    Text("Lưu")
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = onSave) { Text("Lưu") }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun OptionRow(text: String, iconRes: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(painter = painterResource(id = iconRes), contentDescription = text, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

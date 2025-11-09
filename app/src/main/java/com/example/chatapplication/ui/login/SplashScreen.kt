@@ -66,7 +66,7 @@ fun SplashScreen(navController: NavController, viewModel: AuthViewModel,onFinish
         ) {
 
             Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                painter = painterResource(id = R.drawable.ic_app),
                 contentDescription = "Logo",
                 modifier = Modifier
                     .size(140.dp)
